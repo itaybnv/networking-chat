@@ -1,3 +1,8 @@
+"""
+programmer: itay benvenisti
+
+"""
+
 from colorama import Fore,Back,Style,init
 import os, sys
 from socket import AF_INET, socket, SOCK_STREAM
