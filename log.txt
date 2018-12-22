@@ -1,0 +1,19 @@
+[18:30:13.581573] Server waiting for connections...
+[18:30:32.172122] 127.0.0.1 Connected.
+[18:31:58.616688] Server waiting for connections...
+[18:32:05.160265] 127.0.0.1 Connected.
+[18:33:06.698003] Server waiting for connections...
+[18:33:11.419435] 127.0.0.1 Connected.
+[18:34:24.590879] Server waiting for connections...
+[18:34:27.293178] 127.0.0.1 Connected.
+[18:34:31.510971] GOOD LOGIN
+[18:34:31.514961] itaybnv has joined the chat!
+[18:34:43.913519] itaybnv: [37mhello
+[18:34:47.700989] itaybnv has left the chat.
+[18:36:14.520729] 127.0.0.1 Connected.
+[18:36:23.095941] GOOD LOGIN
+[18:36:23.098932] itaybnv has joined the chat!
+[18:36:44.127561] itaybnv has left the chat.
+[18:37:49.202932] 127.0.0.1 Connected.
+[18:37:52.876671] GOOD LOGIN
+[18:37:52.880661] asd has joined the chat!

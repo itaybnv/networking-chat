@@ -25,8 +25,8 @@ def checkValidPort(Port):
     #  If port is between 0 - 65535
     return Port > 0 and Port < 65535
 
-def LRProtocol(username=None, password=None, request=None, response=None, struct=None):
-    return f'001|{username}|{password}|{request}|{response}' if not struct else [x for x in struct.split('|')]
+def LRProtocol(username=None, password=None,nickname=None, request=None, response=None, struct=None):
+    return f'001|{username}|{password}|{nickname}|{request}|{response}' if not struct else [x for x in struct.split('|')]
 
 def getServer():
     global HOST,PORT,ADDR
@@ -55,10 +55,12 @@ def getLogin():
         req = input()
         if req == "R" or req == "r" or req == "L" or req == "l":
             break 
-
+    nick = None
     usr = input("Enter your username: ")
     pss = input("Enter your password: ")
-    return LRProtocol(usr, pss, req, '?')
+    if req == "R" or req == "r":
+        nick = input("What is your nickname: ")
+    return LRProtocol(usr, pss, nick, req, '?')
 
 
 def receive():
@@ -117,12 +119,18 @@ while notLoggedIn:
 
     # Receive an answer for login/register info sent
     ans = LRProtocol(struct=client_socket.recv(BUFFRESIZE).decode())
-    if ans[4] == 'GOOD LOGIN' or ans[4] == 'GOOD REGISTER':
+    if ans[5] == 'GOOD LOGIN' or ans[5] == 'GOOD REGISTER':
         notLoggedIn = False
         receive_thread = Thread(target=receive, daemon=True)
         receive_thread.start()
         send_thread = Thread(target=send, daemon=True)
         send_thread.start()
+        # Join means that the main script follows into send_thread => doesn't end until send_thread closes
         send_thread.join()
-    elif ans[4] == 'BAD LOGIN' or ans[4] == 'BAD REGISTER':
-        print('Bad info. Try again...')
+    elif ans[5] == 'BAD LOGIN':
+        print('Account doesnt exist')
+    elif ans[5] == 'BAD REGISTER':
+        print('Username already taken!')
+    else: 
+        print('Server is not responding')
+        break
