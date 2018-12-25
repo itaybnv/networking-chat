@@ -25,8 +25,17 @@ def checkValidPort(Port):
     #  If port is between 0 - 65535
     return Port > 0 and Port < 65535
 
-def LRProtocol(username=None, password=None,nickname=None, request=None, response=None, struct=None):
-    return f'001|{username}|{password}|{nickname}|{request}|{response}' if not struct else [x for x in struct.split('|')]
+def LRProtocol(username=None, password=None,nickname=None, request=None, response=None):
+    return f'001|{username}|{password}|{nickname}|{request}|{response}'
+
+def MSGProtocol(msg=None):
+    return f'002|{msg}'
+
+def ChannelProtocol(channel=None, request=None, response=None):
+    return f'003|{channel}|{request}|{response}'
+
+def ProtocolDeconstruct(struct):
+    return [x for x in struct.split('|')]
 
 def getServer():
     global HOST,PORT,ADDR
@@ -66,8 +75,33 @@ def getLogin():
 def receive():
     while client_socket:
         try:
-            msg = client_socket.recv(BUFFRESIZE).decode()
-            clientPrint(msg, '')
+            # Get in received a list made of the content of the sent protocol
+            received = client_socket.recv(BUFFRESIZE).decode()
+            received = ProtocolDeconstruct(received)
+            # 001 => LRProtocol
+            if received[0] == '001':
+                pass
+            # 002 => MSGProtocol
+            elif received[0] == '002':
+                clientPrint(received[1], '')
+            # 003 => ChannelProtocol
+            elif received[0] == '003':
+                # 
+                if received[3] == 'CHANNEL DOESNT EXIST':
+                    clientPrint(received[3], Fore.RED)
+                elif received[3] == 'ACCESS DENIED':
+                    clientPrint(received[3], Fore.RED)
+                elif received[3] == 'JOINED SUCCESSFULLY':
+                    clientPrint(received[3], Fore.YELLOW)
+                elif received[3] == 'CREATED SUCCESSFULLY':
+                    clientPrint(received[3], Fore.YELLOW)
+                elif received[3] == 'CHANNEL ALREADY EXISTS':
+                    clientPrint(received[3], Fore.YELLOW)
+                
+
+                elif received[2] == 'ASK TO JOIN CHANNEL':
+                    client_socket.send(ChannelProtocol(received[1], 'JOIN CHANNEL','?').encode())
+
         # In case client left the chat
         except OSError:
             break
@@ -75,10 +109,28 @@ def receive():
 def send():
     while True:
         msg = input()
-        client_socket.send(msg.encode())
-        if msg == '/quit':
-            client_socket.close()
-            break
+        # User entered command
+        if msg[0] == '/':
+            if msg == '/quit':
+                client_socket.close()
+                break
+            elif msg[:6] == '/join ':
+                joinTo = msg[6:]
+                if ' ' not in joinTo:
+                    client_socket.send(ChannelProtocol(joinTo, 'JOIN CHANNEL', '?').encode())
+                else:
+                    clientPrint("A channel name can't contain spaces! Try again", Fore.RED)
+            elif msg[:8] == '/create ':
+                channelName = msg[8:]
+                if ' ' not in channelName:   
+                    client_socket.send(ChannelProtocol(channelName, 'CREATE CHANNEL', '?').encode())
+                else:
+                    clientPrint("A channel name can't contain spaces! Try again", Fore.RED)
+            else:
+                clientPrint('INVALID COMMAND!', Fore.RED)
+        # User entered a message to send
+        else:
+            client_socket.send(MSGProtocol(msg).encode())
 
 
 # CONST VARIABLES
@@ -118,7 +170,7 @@ while notLoggedIn:
     client_socket.send(struct.encode())
 
     # Receive an answer for login/register info sent
-    ans = LRProtocol(struct=client_socket.recv(BUFFRESIZE).decode())
+    ans = ProtocolDeconstruct(client_socket.recv(BUFFRESIZE).decode())
     if ans[5] == 'GOOD LOGIN' or ans[5] == 'GOOD REGISTER':
         notLoggedIn = False
         receive_thread = Thread(target=receive, daemon=True)

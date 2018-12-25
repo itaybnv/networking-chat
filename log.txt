@@ -17,3 +17,93 @@
 [18:37:49.202932] 127.0.0.1 Connected.
 [18:37:52.876671] GOOD LOGIN
 [18:37:52.880661] asd has joined the chat!
+[18:57:20.893497] Server waiting for connections...
+[18:57:37.971820] 127.0.0.1 Connected.
+[18:57:56.545144] GOOD LOGIN
+[18:57:56.546141] (None,) has joined the chat!
+[18:58:05.750523] (None,): [37mhex
+[18:58:16.059949] (None,) has left the chat.
+[13:11:37.839816] Server waiting for connections...
+[13:11:54.940852] 127.0.0.1 Connected.
+[13:12:11.478158] GOOD LOGIN
+[13:14:20.259123] Server waiting for connections...
+[13:14:25.081340] 127.0.0.1 Connected.
+[13:14:29.057802] GOOD LOGIN
+[13:15:08.231276] Server waiting for connections...
+[13:15:13.005639] 127.0.0.1 Connected.
+[13:15:17.445904] GOOD LOGIN
+[13:16:03.972718] Server waiting for connections...
+[13:16:12.066715] 127.0.0.1 Connected.
+[13:16:15.375427] GOOD LOGIN
+[13:18:04.377971] Server waiting for connections...
+[13:18:09.839010] 127.0.0.1 Connected.
+[13:18:13.434007] GOOD LOGIN
+[13:18:13.436001] ('bigwilly69',) has joined the chat!
+[13:18:24.109465] ('bigwilly69',): [37mhex
+[13:19:01.854773] Server waiting for connections...
+[13:19:07.455636] 127.0.0.1 Connected.
+[13:19:10.134562] GOOD LOGIN
+[13:19:10.136077] bigwilly69 has joined the chat!
+[13:19:13.657721] ('bigwilly69',): [37mits work
+[13:19:42.137462] Server waiting for connections...
+[13:19:47.385095] 127.0.0.1 Connected.
+[13:19:51.388961] GOOD LOGIN
+[13:19:51.389959] bigwilly69 has joined the chat!
+[13:19:52.678560] bigwilly69: [37mhey
+[13:19:53.461467] bigwilly69: [37mhex
+[13:22:13.820552] Server waiting for connections...
+[13:22:20.500833] 127.0.0.1 Connected.
+[13:22:28.162502] GOOD LOGIN
+[13:22:28.164496] bigwilly69 has joined the chat!
+[13:22:31.735001] 127.0.0.1 Connected.
+[13:22:42.802609] GOOD REGISTER
+[13:22:42.805602] t has joined the chat!
+[13:23:02.245371] t: [37mhello
+[13:23:05.898193] bigwilly69: [37mhey
+[15:38:23.618111] Server waiting for connections...
+[15:38:32.013872] 127.0.0.1 Connected.
+[15:38:38.380096] GOOD LOGIN
+[15:38:38.381094] test has joined the chat!
+[15:39:26.760155] 127.0.0.1 Connected.
+[15:39:33.136830] GOOD REGISTER
+[15:39:33.137828] t has joined the chat!
+[15:42:37.282206] 127.0.0.1 Connected.
+[15:42:42.752249] GOOD REGISTER
+[15:42:42.753246] t has joined the chat!
+[15:43:04.252359] Server waiting for connections...
+[15:43:12.234703] 127.0.0.1 Connected.
+[15:43:15.458676] GOOD LOGIN
+[15:43:15.459672] test has joined the chat!
+[15:45:45.636036] Server waiting for connections...
+[15:45:50.677173] 127.0.0.1 Connected.
+[15:45:53.967466] GOOD LOGIN
+[15:45:53.968463] test has joined the chat!
+[15:48:28.399474] Server waiting for connections...
+[15:48:32.756908] 127.0.0.1 Connected.
+[15:48:35.613837] GOOD LOGIN
+[15:48:35.614834] test has joined the chat!
+[15:50:39.666568] Server waiting for connections...
+[15:50:51.790013] 127.0.0.1 Connected.
+[15:50:55.377492] BAD LOGIN
+[15:50:58.528128] GOOD LOGIN
+[15:50:58.529125] test has joined the chat!
+[15:51:27.441641] 127.0.0.1 Connected.
+[15:51:35.062005] GOOD LOGIN
+[15:52:31.811267] Server waiting for connections...
+[15:52:38.212286] 127.0.0.1 Connected.
+[15:52:40.960051] GOOD LOGIN
+[15:52:40.962045] test has joined the chat!
+[15:55:18.105280] Server waiting for connections...
+[15:55:29.927038] 127.0.0.1 Connected.
+[15:55:35.726698] GOOD LOGIN
+[15:55:35.727695] test has joined the chat!
+[15:56:06.486890] Server waiting for connections...
+[15:56:11.188900] 127.0.0.1 Connected.
+[15:56:13.601059] GOOD LOGIN
+[15:56:13.604051] test has joined the chat!
+[16:01:39.555164] Server waiting for connections...
+[16:02:03.533500] 127.0.0.1 Connected.
+[16:02:17.306008] GOOD LOGIN
+[16:02:17.309000] test has joined the chat!
+[16:03:58.752058] Server waiting for connections...
+[16:04:19.202848] Server waiting for connections...

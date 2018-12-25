@@ -22,45 +22,103 @@ def serverPrint(text, textColor):
     print(Fore.LIGHTGREEN_EX + f'[{datetime.now().time()}] ' + textColor + text)
     log(text)
 
-def handleClient(client, clientName):
+
+
+def handleClient(client, clientName, room):
+    clientRoom = room
     try:
         # Greet the client
-        client.send(f"Greetings {clientName[0]}, You've succesfully connected to the server. \n If you ever want to quit, type /quit to exit.".encode())
+        client.send(f"Greetings {clientName}, You've succesfully connected to the server. \n If you ever want to quit, type /quit to exit.".encode())
         # Broadcast client connected
         broadcastMSG = f"{clientName} has joined the chat!"
-        broadcast(broadcastMSG.encode('utf-8'))
+        broadcast(broadcastMSG.encode('utf-8'), room= clientRoom)
         serverPrint(broadcastMSG, Fore.GREEN) 
         # Add client to clients dict
         clients[client] = clientName
         # MAIN LOOP
         while True:
-            # Recieve msg from client
-            msg = client.recv(BUFFRSIZE)
-            # Broadcast if not /quit
-            if msg != b'/quit':
-                broadcast(msg, clientName)
-                serverPrint(f'{clientName}: {Fore.WHITE}{msg.decode()}', Fore.LIGHTBLUE_EX) 
-            else:
-                clients.pop(client)
-                client.close()
-                left = f'{clientName} has left the chat.'
-                broadcast(left.encode())
-                serverPrint(left, Fore.RED) 
-                sys.exit()
+            # Get in received a list made of the content of the sent protocol
+            received = client_socket.recv(BUFFRESIZE).decode()
+            received = ProtocolDeconstruct(received)
+            # 001 => LRProtocol
+            if received[0] == '001':
+                pass
+            # 002 => MSGProtocol
+            elif received[0] == '002':
+                if received[1] != '/quit':
+                    broadcast(received[1].encode(), clientRoom, clientName)
+                    serverPrint(f'Room {clientRoom}::: {clientName}: {fore.WHITE}{received[1]}', Fore.LIGHTBLUE_EX)
+                else: 
+                    clients.pop(client)
+                    client.close()
+                    left = f'{clientName} has left the chat.'
+                    broadcast(left.encode(), clientRoom)
+                    serverPrint(left, Fore.RED)
+                    sys.exit()
+            # 003 => ChannelProtocol
+            elif received[0] == '003':
+                if received[2] == 'CREATE CHANNEL':
+                    if received[1] in chatRooms:
+                        client.send(ChannelProtocol(received[1], received[2], 'CHANNEL ALREADY EXISTS').encode())
+                    # Create the channel and put the client in it
+                    else:
+                        # Create the channel
+                        createChannel(received[1], clientRoom, client)
+                        # Update the client's room 
+                        clientRoom = received[1]
+                # ! Currently you can delete a channel only if you are the first one to join to it, which makes sense looking at the create channel option. But may create some problems with the general channel
+                # TODO: Think of a better solution to the problem mentioned above
+                elif received[2] == 'DELETE CHANNEL':
+                    if clientName == chatRooms[received[1]][0]:
+                        deleteChannel(channelName)
+                elif received[2] == 'JOIN CHANNEL':
+                    if received[1] in chatRooms:
+                        joinChannel(received[1], clientRoom, client)
+                        clientRoom = received[1]
     except:
         return
-            
+# TODO: Check if dict[key].action actually changes the dict[key] value or just changes the returned value            
+def createChannel(channelName, prevChannel, socket):
+    # Add the channel to chatRooms dictionary
+    chatRooms[channelName] = [socket]
+    # Remove the client's socket from his previous channel
+    chatRooms[prevChannel] = chatRooms[prevChannel].Remove(socket)
 
-def broadcast(msg, name=""):
-    for client_socket in clients:
+def deleteChannel(name):
+    # Empty channel
+    for socket in chatRooms[name]:
+        chatRooms[name] = chatRooms[name].Remove(socket)
+        chatRooms[GENERAL] = chatRooms[GENERAL].append(socket)
+        # ! TERRIBLE way of changing clientRoom in each client's specific thread. FIND A BETTER WAY!!!
+        socket.send(ChannelProtocol(name,'ASK TO JOIN CHANNEL', '?').encode())
+    # Delete channel from dictionary
+    chatRooms.pop(name)
+
+def joinChannel(channelName, prevChannel, socket):
+    # Add socket to requested channel
+    chatRooms[channelName] = chatRooms[channelName].append(socket)
+    # Remove socket from previous channel
+    chatRooms[prevChannel] = chatRooms[prevChannel].Remove(socket)
+
+def broadcast(msg, room, name="" ):
+    for client_socket in chatRooms[room]:
         if len(name) == 0:
             client_socket.send(f"{Fore.RED}".encode() + msg)
         else:
             client_socket.send(f"{Fore.BLUE}{name}: {Fore.WHITE}{msg.decode()}".encode())
 
 
-def LRProtocol(username=None, password=None,nickname=None, request=None, response=None, struct=None):
-    return f'001|{username}|{password}|{nickname}|{request}|{response}' if not struct else [x for x in struct.split('|')]
+def LRProtocol(username=None, password=None,nickname=None, request=None, response=None):
+    return f'001|{username}|{password}|{nickname}|{request}|{response}'
+
+def MSGProtocol(msg=None):
+    return f'002|{msg}'
+
+def ChannelProtocol(channel=None, request=None, response=None):
+    return f'003|{channel}|{request}|{response}'
+
+def ProtocolDeconstruct(struct):
+    return [x for x in struct.split('|')]
 
 def accountExists(username, password):
     '''Checks if the Account info already exists in accounts database
@@ -109,7 +167,7 @@ def addAccount(username, password, nickname):
 def signHandle(socket):
     # Get the login/register info from client
     struct = socket.recv(BUFFRSIZE).decode()
-    stripped = LRProtocol(struct= struct)
+    stripped = ProtocolDeconstruct(struct)
     # Client is trying to login into an existing account
     if stripped[4] == 'L' or stripped[4] == 'l':      
         if accountExists(stripped[1], stripped[2]):
@@ -130,6 +188,7 @@ def signHandle(socket):
             addAccount(stripped[1], stripped[2], stripped[3])
             stripped[5] = 'GOOD REGISTER'
             serverPrint('GOOD REGISTER', Fore.GREEN)
+            stripped[3] = (stripped[3],) # ? TEST
             return stripped
         else:
             stripped[5] = 'BAD REGISTER'
@@ -147,6 +206,7 @@ def getNickname(username):
 def acceptIncomingConnections():
     while True:
         try:
+            # Wait for a connection
             client_socket, addr = server_socket.accept()
             # Print who connected 
             serverPrint( addr[0] + ' Connected.', Fore.LIGHTGREEN_EX)
@@ -156,8 +216,12 @@ def acceptIncomingConnections():
                 signH = signHandle(client_socket)
                 client_socket.send(LRProtocol(signH[1], signH[2], signH[3], signH[4], signH[5]).encode())
                 if signH[5] == 'GOOD LOGIN' or signH[5] == 'GOOD REGISTER':
+                    # Exit the loop
                     notLoggedIn = False
-                    Thread(target=handleClient, args=(client_socket,signH[3],), daemon=True).start()
+                    
+                    chatRooms[GENERAL].append(client_socket)
+                    # Open a thread that handles the client
+                    Thread(target=handleClient, args=(client_socket,signH[3][0], GENERAL,), daemon=True).start()
         except:
             # Server has ended
             break
@@ -194,8 +258,14 @@ ADDR = (HOST,PORT)
 server_socket = socket(AF_INET, SOCK_STREAM)  # Create a socket for client to connect to
 #adresses = {}
 clients = {}
+chatRooms = {}
+# Default chat room
+GENERAL = '0001'
+chatRooms[GENERAL] = []
+
+
 '''
-NOTE: adresses and clients are dictionaries that look like this:
+NOTE: chatRooms and clients are dictionaries that look like this:
 
     clients:
         socket1 : socket1 client name
@@ -207,13 +277,6 @@ NOTE: adresses and clients are dictionaries that look like this:
 
 # Colorama init
 init()
-'''
-COLORAMA NOTES:
-    * Fore.LIGHTCYAN_EX = normal text color
-    * Fore.LIGHTGREEN_EX = good (connected, sent, ETC...)
-    * Fore.RED = bad (no response, timeout, ETC...)
-    * FORE.BLUE = pending
-'''
 
 # Clear console
 os.system('cls')
@@ -231,5 +294,3 @@ accept_thread.start()
 commands_thread = Thread(target=commands)
 commands_thread.start()
 commands_thread.join()
-
-
