@@ -9,7 +9,7 @@ from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 from datetime import datetime
 import re
-import mysql.connector
+import sqlite3
 
 
 # METHODS
@@ -28,7 +28,7 @@ def handleClient(client, clientName, room):
     clientRoom = room
     try:
         # Greet the client
-        client.send(f"Greetings {clientName}, You've succesfully connected to the server. \n If you ever want to quit, type /quit to exit.".encode())
+        client.send(MSGProtocol(f"Greetings {clientName}, You've succesfully connected to the server. \n If you ever want to quit, type /quit to exit.").encode())
         # Broadcast client connected
         broadcastMSG = f"{clientName} has joined the chat!"
         broadcast(broadcastMSG.encode('utf-8'), room= clientRoom)
@@ -38,7 +38,7 @@ def handleClient(client, clientName, room):
         # MAIN LOOP
         while True:
             # Get in received a list made of the content of the sent protocol
-            received = client_socket.recv(BUFFRESIZE).decode()
+            received = client.recv(BUFFRSIZE).decode()
             received = ProtocolDeconstruct(received)
             # 001 => LRProtocol
             if received[0] == '001':
@@ -47,7 +47,7 @@ def handleClient(client, clientName, room):
             elif received[0] == '002':
                 if received[1] != '/quit':
                     broadcast(received[1].encode(), clientRoom, clientName)
-                    serverPrint(f'Room {clientRoom}::: {clientName}: {fore.WHITE}{received[1]}', Fore.LIGHTBLUE_EX)
+                    serverPrint(f'Room {clientRoom}::: {clientName}: {Fore.WHITE}{received[1]}', Fore.LIGHTBLUE_EX)
                 else: 
                     clients.pop(client)
                     client.close()
@@ -57,6 +57,8 @@ def handleClient(client, clientName, room):
                     sys.exit()
             # 003 => ChannelProtocol
             elif received[0] == '003':
+
+
                 if received[2] == 'CREATE CHANNEL':
                     if received[1] in chatRooms:
                         client.send(ChannelProtocol(received[1], received[2], 'CHANNEL ALREADY EXISTS').encode())
@@ -66,46 +68,80 @@ def handleClient(client, clientName, room):
                         createChannel(received[1], clientRoom, client)
                         # Update the client's room 
                         clientRoom = received[1]
+                        client.send(ChannelProtocol(received[1], received[2], 'CREATED SUCCESSFULLY').encode())
                 # ! Currently you can delete a channel only if you are the first one to join to it, which makes sense looking at the create channel option. But may create some problems with the general channel
                 # TODO: Think of a better solution to the problem mentioned above
+
+
                 elif received[2] == 'DELETE CHANNEL':
-                    if clientName == chatRooms[received[1]][0]:
-                        deleteChannel(channelName)
+                    # ! MIGHT NOT WORK! Because chatrooms[received[1]][0] could be none
+                    if chatRooms[received[1]]:
+                        if client == chatRooms[received[1]][0]:
+                            deleteChannel(received[1])
+                            client.send(ChannelProtocol(received[1], received[2], 'DELETED SUCCESSFULLY').encode())
+                        else:
+                            client.send(ChannelProtocol(received[1], received[2], 'ACCESS DENIED').encode())
+                    else:
+                        client.send(ChannelProtocol(received[1], received[2], 'CHANNEL DOESNT EXIST').encode())
+
+
                 elif received[2] == 'JOIN CHANNEL':
-                    if received[1] in chatRooms:
+                    if clientRoom == received[1]:
+                        client.send(ChannelProtocol(received[1], received[2], "ALREADY IN CHANNEL").encode())
+                    elif received[1] in chatRooms:
                         joinChannel(received[1], clientRoom, client)
                         clientRoom = received[1]
-    except:
+                        client.send(ChannelProtocol(received[1], received[2], "JOINED SUCCESSFULLY").encode())
+                    else:
+                        client.send(ChannelProtocol(received[1], received[2], "CHANNEL DOESNT EXIST").encode())
+    except Exception as ex:
+        print("except Number 1")
+        print(ex)
         return
-# TODO: Check if dict[key].action actually changes the dict[key] value or just changes the returned value            
+
+
 def createChannel(channelName, prevChannel, socket):
     # Add the channel to chatRooms dictionary
     chatRooms[channelName] = [socket]
     # Remove the client's socket from his previous channel
-    chatRooms[prevChannel] = chatRooms[prevChannel].Remove(socket)
+    chatRooms[prevChannel] = chatRooms[prevChannel].remove(socket)
 
-def deleteChannel(name):
+def deleteChannel(channelName):
+    print(chatRooms[channelName])
     # Empty channel
-    for socket in chatRooms[name]:
-        chatRooms[name] = chatRooms[name].Remove(socket)
-        chatRooms[GENERAL] = chatRooms[GENERAL].append(socket)
+    for socket in chatRooms[channelName]:
+        chatRooms[channelName] = chatRooms[channelName].remove(socket)
+        if chatRooms[GENERAL]:
+            chatRooms[GENERAL] = chatRooms[GENERAL].append(socket)
+        else:
+            chatRooms[GENERAL] = [socket]
         # ! TERRIBLE way of changing clientRoom in each client's specific thread. FIND A BETTER WAY!!!
-        socket.send(ChannelProtocol(name,'ASK TO JOIN CHANNEL', '?').encode())
+        socket.send(ChannelProtocol(GENERAL,'ASK TO JOIN CHANNEL', '?').encode())
     # Delete channel from dictionary
-    chatRooms.pop(name)
+    chatRooms.pop(channelName)
 
 def joinChannel(channelName, prevChannel, socket):
     # Add socket to requested channel
-    chatRooms[channelName] = chatRooms[channelName].append(socket)
+    if chatRooms[channelName]:
+        chatRooms[channelName] = chatRooms[channelName].append(socket)
+    else:
+        chatRooms[channelName] = [socket]
     # Remove socket from previous channel
-    chatRooms[prevChannel] = chatRooms[prevChannel].Remove(socket)
+    if chatRooms[prevChannel]:
+        chatRooms[prevChannel] = chatRooms[prevChannel].remove(socket)
 
 def broadcast(msg, room, name="" ):
-    for client_socket in chatRooms[room]:
-        if len(name) == 0:
-            client_socket.send(f"{Fore.RED}".encode() + msg)
-        else:
-            client_socket.send(f"{Fore.BLUE}{name}: {Fore.WHITE}{msg.decode()}".encode())
+    try:
+        for client_socket in chatRooms[room]:
+            if len(name) == 0:
+                client_socket.send(MSGProtocol(f"{Fore.RED}" + msg.decode()).encode())
+            else:
+                client_socket.send(MSGProtocol(f"{Fore.BLUE}{name}: {Fore.WHITE}{msg.decode()}").encode())
+    except Exception as ex:
+        print("except Number 2")
+        print(ex)
+        return
+
 
 
 def LRProtocol(username=None, password=None,nickname=None, request=None, response=None):
@@ -133,7 +169,6 @@ def accountExists(username, password):
 
     mycursor.execute(f"SELECT * FROM Accounts WHERE username = '{username}' AND password = '{password}'")
     mycursor.fetchone()
-    print('accountexists ' + str(mycursor.rowcount))
     return mycursor.rowcount != -1
    
 
@@ -222,19 +257,23 @@ def acceptIncomingConnections():
                     chatRooms[GENERAL].append(client_socket)
                     # Open a thread that handles the client
                     Thread(target=handleClient, args=(client_socket,signH[3][0], GENERAL,), daemon=True).start()
-        except:
+        except Exception as ex:
+            print("except Number 3")
+            print(ex)
             # Server has ended
             break
 
 def connectToDatabase():
     try:
-        mydb = mysql.connector.connect(host="localhost", user="root", passwd="Itay01itay01", database='testdb')
+        mydb = sqlite3.connect(FILEPATH + "\\WhiteHatDB.db")
         mycursor = mydb.cursor()
         return (mydb, mycursor,)
-    except:
+    except Exception as ex:
+        print("except Number 4")
+        print (ex)
         return None
 
-def commands():
+"""def commands():
     while True:
         command = input()
         if (command == 'quit'):
@@ -244,11 +283,12 @@ def commands():
 def shutdown():
     for client in clients:
         client.close()
-    server_socket.close()
+    server_socket.close()"""
     
 
 
 # CONST VARIABLES
+FILEPATH = os.path.dirname(os.path.abspath(__file__))
 HOST = '0.0.0.0'  #accept everyone
 PORT = 55556
 BUFFRSIZE = 1024
@@ -289,8 +329,9 @@ server_socket.bind(ADDR)  # bind the socket to the address (HOST:PORT)
 server_socket.listen(10)  # set the client queue max length to connect to the server_socket
 # Print Wait for connection
 serverPrint ('Server waiting for connections...', Fore.LIGHTCYAN_EX)
-accept_thread = Thread(target= acceptIncomingConnections)
-accept_thread.start()
-commands_thread = Thread(target=commands)
+"""accept_thread = Thread(target= acceptIncomingConnections)
+accept_thread.start()"""
+acceptIncomingConnections()
+"""commands_thread = Thread(target=commands)
 commands_thread.start()
-commands_thread.join()
+commands_thread.join()"""

@@ -3,6 +3,8 @@ import os, sys
 from socket import *
 from threading import Thread
 from datetime import datetime
+import untitled
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 # METHODS
@@ -38,7 +40,6 @@ def ProtocolDeconstruct(struct):
     return [x for x in struct.split('|')]
 
 def getServer():
-    global HOST,PORT,ADDR
     #  Get IP from client
     clientPrint('enter server IP (Enter nothing for LOCALHOST): ', Fore.LIGHTCYAN_EX)
     serverIP = input()
@@ -46,16 +47,7 @@ def getServer():
     if serverIP:
         # If IP is valid   
         if checkValidIP(serverIP):
-            HOST = serverIP #  set HOST IP
-    #  Get IP from client
-    clientPrint('enter server Port: ', Fore.LIGHTCYAN_EX)
-    serverPort = int(input())
-    #  If client entered input
-    if serverPort:
-        # If PORT is valid   
-        if checkValidPort(serverPort):
-            PORT = serverPort #  set HOST PORT
-    ADDR = (HOST,PORT)  # make the address tuple
+            return serverIP
 
 def getLogin():
     print("Press R for register/ L for login: ")
@@ -78,6 +70,7 @@ def receive():
             # Get in received a list made of the content of the sent protocol
             received = client_socket.recv(BUFFRESIZE).decode()
             received = ProtocolDeconstruct(received)
+            print(received)
             # 001 => LRProtocol
             if received[0] == '001':
                 pass
@@ -86,16 +79,20 @@ def receive():
                 clientPrint(received[1], '')
             # 003 => ChannelProtocol
             elif received[0] == '003':
-                # 
+                
                 if received[3] == 'CHANNEL DOESNT EXIST':
                     clientPrint(received[3], Fore.RED)
+                elif received[3] == 'CHANNEL ALREADY EXISTS':
+                    clientPrint(received[3], Fore.YELLOW)
                 elif received[3] == 'ACCESS DENIED':
                     clientPrint(received[3], Fore.RED)
+                elif received[3] == 'DELETED SUCCESSFULLY':
+                    clientPrint(received[3], Fore.YELLOW)
                 elif received[3] == 'JOINED SUCCESSFULLY':
                     clientPrint(received[3], Fore.YELLOW)
                 elif received[3] == 'CREATED SUCCESSFULLY':
                     clientPrint(received[3], Fore.YELLOW)
-                elif received[3] == 'CHANNEL ALREADY EXISTS':
+                elif received[3] == 'ALREADY IN CHANNEL':
                     clientPrint(received[3], Fore.YELLOW)
                 
 
@@ -103,34 +100,47 @@ def receive():
                     client_socket.send(ChannelProtocol(received[1], 'JOIN CHANNEL','?').encode())
 
         # In case client left the chat
-        except OSError:
+        except Exception as ex:
+            print("except Number 1")
+            print(ex)
             break
 
 def send():
     while True:
         msg = input()
-        # User entered command
-        if msg[0] == '/':
-            if msg == '/quit':
-                client_socket.close()
-                break
-            elif msg[:6] == '/join ':
-                joinTo = msg[6:]
-                if ' ' not in joinTo:
-                    client_socket.send(ChannelProtocol(joinTo, 'JOIN CHANNEL', '?').encode())
+        # Skip input that has nothing in it
+        if len(msg) > 0:
+            # User entered command
+            if msg[0] == '/':
+                if msg == '/quit':
+                    client_socket.close()
+                    break
+                elif msg[:6] == '/join ':
+                    joinTo = msg[6:]
+                    if ' ' not in joinTo:
+                        client_socket.send(ChannelProtocol(joinTo, 'JOIN CHANNEL', '?').encode())
+                    else:
+                        clientPrint("A channel name can't contain spaces! Try again", Fore.RED)
+                elif msg[:8] == '/create ':
+                    channelName = msg[8:]
+                    if ' ' not in channelName:   
+                        client_socket.send(ChannelProtocol(channelName, 'CREATE CHANNEL', '?').encode())
+                    else:
+                        clientPrint("A channel name can't contain spaces! Try again", Fore.RED)
+                elif msg[:8] == '/delete ':
+                    channelName = msg[8:]
+                    if ' ' not in channelName:
+                        client_socket.send(ChannelProtocol(channelName,'DELETE CHANNEL', '?').encode())
+                    else:
+                        clientPrint("A channel name can't contain spaces! Try again", Fore.RED)
                 else:
-                    clientPrint("A channel name can't contain spaces! Try again", Fore.RED)
-            elif msg[:8] == '/create ':
-                channelName = msg[8:]
-                if ' ' not in channelName:   
-                    client_socket.send(ChannelProtocol(channelName, 'CREATE CHANNEL', '?').encode())
-                else:
-                    clientPrint("A channel name can't contain spaces! Try again", Fore.RED)
+                    clientPrint('INVALID COMMAND!', Fore.RED)
+            # User entered a message to send
             else:
-                clientPrint('INVALID COMMAND!', Fore.RED)
-        # User entered a message to send
-        else:
-            client_socket.send(MSGProtocol(msg).encode())
+                client_socket.send(MSGProtocol(msg).encode())
+
+def event_handler():
+    ui.LoginButton.clicked.connect(lambda: sys.exit())
 
 
 # CONST VARIABLES
@@ -141,26 +151,26 @@ ADDR = (HOST,PORT)
 
 client_socket = socket(AF_INET, SOCK_STREAM)
 
-
-# Colorama init
-init()
-'''
-COLORAMA NOTES:
-    * Fore.LIGHTCYAN_EX = normal text color
-    * Fore.LIGHTGREEN_EX = good (connected, sent, ETC...)
-    * Fore.RED = bad (no response, timeout, ETC...)
-    * FORE.BLUE = pending
-'''
-
 # Clear console
 os.system('cls')
+
+app = QtWidgets.QApplication(sys.argv)
+MainWindow = QtWidgets.QMainWindow()
+ui = untitled.Ui_MainWindow()
+ui.setupUi(MainWindow)
+MainWindow.setFixedSize(1280,720)
+ui.stackedWidget.setCurrentIndex(0)
+ui.tabWidget.setCurrentIndex(0)
+MainWindow.show()
+event_handler()
+sys.exit(app.exec_())
+
 
 # Get server info
 getServer()
 
 # Connect to the server
 client_socket.connect(ADDR)
-
 notLoggedIn = True
 while notLoggedIn:
     # Get client's login info
